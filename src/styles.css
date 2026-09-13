@@ -414,3 +414,8 @@ body {
 .team-add { position: relative; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--line); }
 .addpicker { position: absolute; bottom: 100%; left: 0; right: 0; z-index: 45; margin-bottom: 0.3rem;
   background: var(--paper); border: 2px solid var(--ink); border-radius: 10px; box-shadow: var(--shadow-lg); padding: 0.5rem; }
+
+/* rotation flags on the board */
+.flag-overdue { margin-left: 0.35rem; font-size: 0.7rem; vertical-align: middle; cursor: help; filter: saturate(0.9); }
+.flag-doubled { display: inline-flex; align-items: center; margin-left: 0.35rem; font-size: 0.6rem; font-weight: 800;
+  background: var(--dsb); color: #fff; padding: 0.02rem 0.3rem; border-radius: 4px; vertical-align: middle; cursor: help; letter-spacing: 0.02em; }

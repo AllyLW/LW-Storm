@@ -51,6 +51,37 @@ export default function Board() {
       for (const b of ["starters", "subs"])
         board.events[ev][t][b].forEach((m) => placedIds.add(m.id));
 
+  // --- rotation flags ---------------------------------------------------
+  // B) "overdue" = a pool player who did NOT play in the most recent
+  //    confirmed week before this one. Core never gets it.
+  const overdueSet = new Set();
+  const lastConfirmed = weeks
+    .filter((w) => w.confirmed_at && w.board && w.week_index < week.week_index)
+    .sort((a, b) => b.week_index - a.week_index)[0];
+  if (lastConfirmed) {
+    const playedLast = new Set();
+    for (const ev of EVENTS)
+      for (const t of ["A", "B"])
+        for (const bk of ["starters", "subs"])
+          (lastConfirmed.board.events?.[ev]?.[t]?.[bk] || []).forEach((m) => playedLast.add(m.id));
+    // any active pool member who isn't core and didn't play last week is overdue
+    for (const m of members) {
+      if (!m.active || coreSet.has(m.id)) continue;
+      if (!playedLast.has(m.id)) overdueSet.add(m.id);
+    }
+  }
+
+  // C) "doubled-up" = a pool player placed in BOTH events this week.
+  const inCSB = new Set();
+  const inDSB = new Set();
+  for (const t of ["A", "B"])
+    for (const bk of ["starters", "subs"]) {
+      (board.events.CSB[t][bk] || []).forEach((m) => inCSB.add(m.id));
+      (board.events.DSB[t][bk] || []).forEach((m) => inDSB.add(m.id));
+    }
+  const doubledSet = new Set();
+  inCSB.forEach((id) => { if (inDSB.has(id) && !coreSet.has(id)) doubledSet.add(id); });
+
   async function confirmWeek() {
     if (!window.confirm("Confirm this week? It locks the board and counts toward everyone's participation. You can reopen it later if needed.")) return;
     try {
@@ -187,6 +218,8 @@ export default function Board() {
                 data={board.events[ev][team]}
                 coreSet={coreSet}
                 availability={availability}
+                overdueSet={overdueSet}
+                doubledSet={doubledSet}
                 canEdit={canEdit && !confirmed}
                 editor={editor}
                 setEditor={setEditor}
@@ -272,7 +305,7 @@ function AddPicker(props) {
 }
 
 function SlotList(props) {
-  const { title, cap, rows, sub, ev, team, bucket, coreSet, availability, canEdit,
+  const { title, cap, rows, sub, ev, team, bucket, coreSet, availability, overdueSet, doubledSet, canEdit,
           editor, setEditor, members, placedIds, onRemove, onSwap, onMove } = props;
   return (
     <div className={"slotlist" + (sub ? " subs" : "")}>
@@ -289,6 +322,8 @@ function SlotList(props) {
                 {coreSet.has(m.id) && <span className="dot" title="Core" />}
                 {m.name}
                 {!avail && <span className="warn" title="Wasn't marked available this week">!</span>}
+                {overdueSet && overdueSet.has(m.id) && <span className="flag-overdue" title="Didn't play last week — give them a turn">⏳</span>}
+                {doubledSet && doubledSet.has(m.id) && <span className="flag-doubled" title="Placed in BOTH events this week while others may be sitting out">×2</span>}
               </span>
               <span className="slot-thp">{thpShort(m.thp)}</span>
               {canEdit && (
