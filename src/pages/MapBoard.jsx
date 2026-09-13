@@ -26,10 +26,12 @@ export default function MapBoard() {
   const [maps, setMaps] = useState(() => week?.board?.maps ? clone(week.board.maps) : emptyMaps());
   const [syncedId, setSyncedId] = useState(week?.id);
   const [picking, setPicking] = useState(null);
+  const [pickingZone, setPickingZone] = useState(null); // zone key being assigned a guardian
   if (week && week.id !== syncedId) {
     setSyncedId(week.id);
     setMaps(week.board?.maps ? clone(week.board.maps) : emptyMaps());
     setPicking(null);
+    setPickingZone(null);
   }
 
   const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
@@ -52,9 +54,26 @@ export default function MapBoard() {
   const teamRoster = [...teamData.starters, ...teamData.subs];
   const assign = maps[ev][team];
   const coreSet = new Set(week.board.core || []);
+  // guardians stored under a reserved key so they travel with the same maps blob
+  const guardians = assign.__guardians || {};
 
   const placedHere = new Set();
-  Object.values(assign).forEach((ids) => ids.forEach((id) => placedHere.add(id)));
+  Object.entries(assign).forEach(([k, ids]) => {
+    if (k === "__guardians") return;
+    ids.forEach((id) => placedHere.add(id));
+  });
+
+  function setGuardian(zoneKey, id) {
+    setMaps((prev) => {
+      const n = clone(prev);
+      const g = n[ev][team].__guardians || {};
+      if (id == null) delete g[zoneKey];
+      else g[zoneKey] = id;
+      n[ev][team].__guardians = g;
+      return n;
+    });
+    setPickingZone(null);
+  }
 
   function toggleAssign(buildingKey, id) {
     setMaps((prev) => {
@@ -121,9 +140,7 @@ export default function MapBoard() {
         <div className="mapframe" style={{ aspectRatio: String(layout.aspect) }}>
           <img className="mapimg" src={BASE + layout.image} alt={layout.label} draggable="false" />
           {layout.spawns.map((s, i) => (
-            <div key={i} className={"map-spawn " + s.team} style={{ left: `${s.x}%`, top: `${s.y}%` }}>
-              {s.team === "blue" ? "Blue base" : "Red base"}
-            </div>
+            <div key={i} className={"map-spawn " + s.team} style={{ left: `${s.x}%`, top: `${s.y}%` }} />
           ))}
           {layout.buildings.map((b) => {
             const ids = assign[b.key] || [];
@@ -155,6 +172,33 @@ export default function MapBoard() {
                     onToggle={(id) => toggleAssign(b.key, id)}
                     onClear={() => clearBuilding(b.key)}
                     onClose={() => setPicking(null)}
+                  />
+                )}
+              </div>
+            );
+          })}
+
+          {/* guardian zone tags — big names on the edges covering ~2 buildings */}
+          {(layout.zones || []).map((z) => {
+            const gid = guardians[z.key];
+            const gm = gid ? memberById.get(gid) : null;
+            const open = pickingZone === z.key;
+            return (
+              <div key={z.key} className="map-zpos" style={{ left: `${z.x}%`, top: `${z.y}%` }}>
+                <button
+                  className={"map-guardian" + (gm ? " filled" : " empty")}
+                  onClick={() => canEdit && !confirmed && setPickingZone(open ? null : z.key)}
+                  title={"Guardian covering: " + z.covers.map((k) => layout.buildings.find((b) => b.key === k)?.name).filter(Boolean).join(", ")}
+                >
+                  {gm ? gm.name : (canEdit && !confirmed ? "+ guardian" : "")}
+                </button>
+                {open && (
+                  <GuardianPicker
+                    zone={z} layout={layout} currentId={gid}
+                    teamRoster={teamRoster} coreSet={coreSet}
+                    onPick={(id) => setGuardian(z.key, id)}
+                    onClear={() => setGuardian(z.key, null)}
+                    onClose={() => setPickingZone(null)}
                   />
                 )}
               </div>
@@ -224,6 +268,40 @@ function BuildingPicker({ building, ids, teamRoster, placedHere, coreSet, onTogg
         {list.length === 0 && <li className="muted small" style={{ padding: "0.4rem" }}>No match</li>}
       </ul>
       {ids.length > 0 && <button className="bpicker-clear" onClick={onClear}>Clear building</button>}
+    </div>
+  );
+}
+
+function GuardianPicker({ zone, layout, currentId, teamRoster, coreSet, onPick, onClear, onClose }) {
+  const [q, setQ] = useState("");
+  const covers = zone.covers.map((k) => layout.buildings.find((b) => b.key === k)?.name).filter(Boolean);
+  const list = teamRoster
+    .filter((m) => m.name.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name));
+  return (
+    <div className="bpicker guardian-picker" onClick={(e) => e.stopPropagation()}>
+      <div className="bpicker-head">
+        <strong>Guardian</strong>
+        <button className="bpicker-close" onClick={onClose}>×</button>
+      </div>
+      <p className="muted small" style={{ margin: "0 0 0.4rem" }}>Covers: {covers.join(", ")}</p>
+      <input autoFocus className="bpicker-search" placeholder="Pick a strong player…"
+        value={q} onChange={(e) => setQ(e.target.value)} />
+      <ul className="bpicker-list">
+        {list.map((m) => (
+          <li key={m.id}>
+            <button className={"bpick " + (currentId === m.id ? "on" : "")} onClick={() => onPick(m.id)}>
+              <span className="bpick-name">
+                {coreSet.has(m.id) && <span className="dot" />}{m.name}
+              </span>
+              <span className="bpick-thp">{thpShort(m.thp)}</span>
+              <span className="bpick-check">{currentId === m.id ? "✓" : ""}</span>
+            </button>
+          </li>
+        ))}
+        {list.length === 0 && <li className="muted small" style={{ padding: "0.4rem" }}>No match</li>}
+      </ul>
+      {currentId && <button className="bpicker-clear" onClick={onClear}>Remove guardian</button>}
     </div>
   );
 }

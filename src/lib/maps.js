@@ -27,6 +27,14 @@ export const MAPS = {
       { key: "mercenary", name: "Mercenary",    kind: "debuff",   x: 49, y: 71 },
       { key: "tech",    name: "Tech Center",    kind: "tech",     x: 66, y: 71 },
     ],
+    zones: [
+      { key: "z-topleft",  label: "NW",     x: 22, y: 10, covers: ["info", "oil1"] },
+      { key: "z-top",      label: "Center", x: 49, y: 8,  covers: ["arsenal", "silo"] },
+      { key: "z-topright", label: "NE",     x: 78, y: 12, covers: ["hosp4", "hosp2"] },
+      { key: "z-botleft",  label: "SW",     x: 16, y: 78, covers: ["hosp1", "hosp3"] },
+      { key: "z-bot",      label: "Bottom", x: 45, y: 90, covers: ["mercenary"] },
+      { key: "z-botright", label: "SE",     x: 80, y: 82, covers: ["oil2", "tech"] },
+    ],
   },
 
   // Canyon uses the same background for now — swap `image` + positions when the
@@ -51,6 +59,14 @@ export const MAPS = {
       { key: "hosp3",   name: "Hospital 3",     kind: "hospital", x: 32, y: 65 },
       { key: "mercenary", name: "Mercenary",    kind: "debuff",   x: 49, y: 71 },
       { key: "tech",    name: "Tech Center",    kind: "tech",     x: 66, y: 71 },
+    ],
+    zones: [
+      { key: "z-topleft",  label: "NW",     x: 22, y: 10, covers: ["info", "oil1"] },
+      { key: "z-top",      label: "Center", x: 49, y: 8,  covers: ["arsenal", "silo"] },
+      { key: "z-topright", label: "NE",     x: 78, y: 12, covers: ["hosp4", "hosp2"] },
+      { key: "z-botleft",  label: "SW",     x: 16, y: 78, covers: ["hosp1", "hosp3"] },
+      { key: "z-bot",      label: "Bottom", x: 45, y: 90, covers: ["mercenary"] },
+      { key: "z-botright", label: "SE",     x: 80, y: 82, covers: ["oil2", "tech"] },
     ],
   },
 };

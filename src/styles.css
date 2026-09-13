@@ -419,3 +419,12 @@ body {
 .flag-overdue { margin-left: 0.35rem; font-size: 0.7rem; vertical-align: middle; cursor: help; filter: saturate(0.9); }
 .flag-doubled { display: inline-flex; align-items: center; margin-left: 0.35rem; font-size: 0.6rem; font-weight: 800;
   background: var(--dsb); color: #fff; padding: 0.02rem 0.3rem; border-radius: 4px; vertical-align: middle; cursor: help; letter-spacing: 0.02em; }
+
+/* guardian zone tags — big names on the map edges */
+.map-zpos { position: absolute; transform: translate(-50%,-50%); z-index: 3; }
+.map-guardian { font-weight: 800; font-size: 0.72rem; color: #fff; cursor: pointer;
+  background: #141210; border: 2px solid #fff; border-radius: 8px; padding: 0.25rem 0.6rem;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.6); white-space: nowrap; letter-spacing: 0.02em; transition: transform 0.08s; }
+.map-guardian:hover { transform: scale(1.05); }
+.map-guardian.empty { background: rgba(20,18,16,0.5); border-style: dashed; font-size: 0.6rem; font-weight: 700; opacity: 0.85; }
+.guardian-picker { width: 13rem; }
