@@ -96,6 +96,11 @@ function poolComparator(history, weekIndex) {
 export function assign(roster, availability, history, opts = {}) {
   const coreSize = opts.coreSize ?? 34;
   const weekIndex = opts.weekIndex ?? 0;
+  // locks: { [memberId]: { ev, team } } — pre-placed players whose event+team
+  // are fixed by the user (seed+fill mode). The engine keeps them on that team
+  // and fills the remaining seats around them. starter/sub is still decided by
+  // THP at the end, so a locked player sits wherever their power lands.
+  const locks = opts.locks || {};
 
   const byId = new Map(roster.map((m) => [m.id, m]));
   const core = computeCore(roster, coreSize);
@@ -116,36 +121,50 @@ export function assign(roster, availability, history, opts = {}) {
   const poolGiven = {};
   poolMembers.forEach((m) => (poolGiven[m.id] = 0));
 
-  // Build the raw membership list for each event (before A/B snake).
-  // eventMembers[ev] = array of members assigned to that event.
+  // Locked players, grouped by event -> team. These are pre-placed and bypass
+  // the A/B snake (the user already chose their team). Count them toward their
+  // event so auto-fill respects the remaining capacity.
+  const lockedByEventTeam = { CSB: { A: [], B: [] }, DSB: { A: [], B: [] } };
+  const lockedIds = new Set();
+  for (const [id, where] of Object.entries(locks)) {
+    const m = byId.get(id);
+    if (!m || !m.active || !where) continue;
+    if (!EVENTS.includes(where.ev) || !["A", "B"].includes(where.team)) continue;
+    lockedByEventTeam[where.ev][where.team].push(m);
+    lockedIds.add(id);
+    if (poolGiven[id] != null) poolGiven[id] += 1; // locked pool player has this event
+  }
+
+  // Build the auto-filled membership per event (locked players excluded here,
+  // they're added straight to their team later).
   const eventMembers = { CSB: [], DSB: [] };
   const unplaced = { core: [], pool: [] };
 
   for (const ev of EVENTS) {
-    const seats = EVENT_CAP;
+    const lockedCount = lockedByEventTeam[ev].A.length + lockedByEventTeam[ev].B.length;
+    const seats = EVENT_CAP - lockedCount; // remaining seats after locks
     const chosen = [];
 
-    // (2) Core available for this event go in first, by THP.
+    // (2) Core available for this event go in first, by THP (skip locked).
     for (const m of coreMembers) {
+      if (lockedIds.has(m.id)) continue;
       if (!avail(m.id, ev)) continue;
       if (chosen.length < seats) chosen.push(m);
-      else unplaced.core.push(m.id); // capacity blown by core alone (rare)
+      else unplaced.core.push(m.id);
     }
 
-    // (3)+(4) Pool fills the rest. Two passes:
-    //   pass 1: only pool players who have 0 events so far this week
-    //           (guarantees "no one misses both / everyone gets one first")
-    //   pass 2: if slots remain, allow seconds, still in fairness order
+    // (3)+(4) Pool fills the rest (skip locked).
     const passes = [
-      poolQueue.filter((m) => poolGiven[m.id] === 0),
-      poolQueue, // seconds allowed
+      poolQueue.filter((m) => poolGiven[m.id] === 0 && !lockedIds.has(m.id)),
+      poolQueue,
     ];
     for (let p = 0; p < passes.length; p++) {
       for (const m of passes[p]) {
         if (chosen.length >= seats) break;
+        if (lockedIds.has(m.id)) continue;
         if (!avail(m.id, ev)) continue;
         if (p === 0 && poolGiven[m.id] !== 0) continue;
-        if (p === 1 && poolGiven[m.id] !== 1) continue; // only give a 2nd, not a 3rd
+        if (p === 1 && poolGiven[m.id] !== 1) continue;
         if (chosen.includes(m)) continue;
         chosen.push(m);
         poolGiven[m.id] += 1;
@@ -158,18 +177,66 @@ export function assign(roster, availability, history, opts = {}) {
   // Any available pool player who ended the week with 0 events, despite a
   // slot never opening for them, is genuinely unplaced (turnout > capacity).
   for (const m of poolMembers) {
+    if (lockedIds.has(m.id)) continue;
     const wanted = avail(m.id, "CSB") || avail(m.id, "DSB");
     if (wanted && poolGiven[m.id] === 0) unplaced.pool.push(m.id);
   }
 
-  // (5)+(6) Snake each event's group into balanced Team A/B, then split
-  // each team into starters/subs by THP.
+  // (5)+(6) Snake the AUTO-filled group into A/B, then add locked players onto
+  // their chosen team, then split each team into starters/subs by THP.
+  // Locked players are guaranteed their seat: they're placed first, and auto
+  // players fill only the remaining seats on that team.
   const events = {};
   for (const ev of EVENTS) {
-    events[ev] = snakeAndSplit(eventMembers[ev]);
+    const snaked = snakeGroups(eventMembers[ev]);
+    const A = mergeLocked(lockedByEventTeam[ev].A, snaked.A);
+    const B = mergeLocked(lockedByEventTeam[ev].B, snaked.B);
+    events[ev] = { A, B };
   }
 
   return { core, events, assignedPool: poolGiven, unplaced };
+}
+
+// Merge locked (guaranteed) players with auto-filled players into one team,
+// then split starters/subs by THP — but locked players always keep a seat.
+// Locked players occupy their slots first; auto players fill the rest up to cap.
+function mergeLocked(locked, auto) {
+  const cap = STARTERS_PER_TEAM + SUBS_PER_TEAM;
+  const lockedSorted = locked.slice().sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name));
+  const autoSorted = auto.slice().sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name));
+  // locked take priority for seats; auto fill remaining
+  const room = Math.max(0, cap - lockedSorted.length);
+  const kept = [...lockedSorted, ...autoSorted.slice(0, room)];
+  // now order the kept team by THP for starter/sub split
+  const ordered = kept.slice().sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name));
+  return {
+    starters: ordered.slice(0, STARTERS_PER_TEAM),
+    subs: ordered.slice(STARTERS_PER_TEAM, STARTERS_PER_TEAM + SUBS_PER_TEAM),
+    overflow: autoSorted.slice(room), // auto players who didn't fit (locked never overflow)
+  };
+}
+
+// Snake a group into two balanced arrays A/B by THP (members only, no split).
+function snakeGroups(group) {
+  const sorted = group.slice().sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name));
+  const A = [], B = [];
+  sorted.forEach((m, i) => {
+    const pairEven = Math.floor(i / 2) % 2 === 0;
+    const firstInPair = i % 2 === 0;
+    const toA = pairEven ? firstInPair : !firstInPair;
+    (toA ? A : B).push(m);
+  });
+  return { A, B };
+}
+
+// Split a team array into starters/subs by THP (exposed for reuse).
+function splitTeamPublic(team) {
+  const sorted = team.slice().sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name));
+  return {
+    starters: sorted.slice(0, STARTERS_PER_TEAM),
+    subs: sorted.slice(STARTERS_PER_TEAM, STARTERS_PER_TEAM + SUBS_PER_TEAM),
+    overflow: sorted.slice(STARTERS_PER_TEAM + SUBS_PER_TEAM),
+  };
 }
 
 // Snake a THP-sorted group across Team A / Team B for power balance,

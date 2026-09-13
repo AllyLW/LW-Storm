@@ -203,3 +203,56 @@ test("event never exceeds its capacity", () => {
     assert.ok(count <= EVENT_CAP, `${ev} has ${count}, cap ${EVENT_CAP}`);
   }
 });
+
+// ---- seed + fill (locks) -----------------------------------------
+
+test("locked player stays on their chosen event and team", () => {
+  const roster = makeRoster(100);
+  const avail = allAvailable(roster);
+  // lock a mid-pool player (m70) to CSB Team B, even though by THP they'd not be there
+  const locks = { m70: { ev: "CSB", team: "B" } };
+  const { events } = assign(roster, avail, emptyHistory, { coreSize: 34, locks });
+  const inTeam = (ev, team) =>
+    [...events[ev][team].starters, ...events[ev][team].subs].some((m) => m.id === "m70");
+  assert.ok(inTeam("CSB", "B"), "m70 should be on CSB Team B");
+  // and NOT on CSB Team A
+  assert.ok(!inTeam("CSB", "A"), "m70 should not be on CSB Team A");
+});
+
+test("locked player still gets starter/sub by THP", () => {
+  const roster = makeRoster(100);
+  const avail = allAvailable(roster);
+  // lock the single strongest player to DSB Team A -> should be a starter
+  const locks = { m1: { ev: "DSB", team: "A" } };
+  const { events } = assign(roster, avail, emptyHistory, { coreSize: 34, locks });
+  const isStarter = events.DSB.A.starters.some((m) => m.id === "m1");
+  assert.ok(isStarter, "strongest locked player should start");
+});
+
+test("locks don't break capacity", () => {
+  const roster = makeRoster(200);
+  const avail = allAvailable(roster);
+  const locks = { m150: { ev: "CSB", team: "A" }, m151: { ev: "CSB", team: "B" } };
+  const res = assign(roster, avail, emptyHistory, { coreSize: 34, locks });
+  for (const ev of ["CSB", "DSB"]) {
+    const count = [
+      ...res.events[ev].A.starters, ...res.events[ev].A.subs,
+      ...res.events[ev].B.starters, ...res.events[ev].B.subs,
+    ].length;
+    assert.ok(count <= EVENT_CAP, `${ev} within capacity`);
+  }
+  // locked players are present
+  const csbAll = ["A","B"].flatMap((t) => [...res.events.CSB[t].starters, ...res.events.CSB[t].subs]).map((m)=>m.id);
+  assert.ok(csbAll.includes("m150") && csbAll.includes("m151"));
+});
+
+test("no locks behaves exactly like before", () => {
+  const roster = makeRoster(60);
+  const avail = allAvailable(roster);
+  const a = assign(roster, avail, emptyHistory, { coreSize: 34 });
+  const b = assign(roster, avail, emptyHistory, { coreSize: 34, locks: {} });
+  // same total placed both ways
+  const count = (r, ev) => ["A","B"].reduce((s,t)=>s+r.events[ev][t].starters.length+r.events[ev][t].subs.length,0);
+  assert.equal(count(a,"CSB"), count(b,"CSB"));
+  assert.equal(count(a,"DSB"), count(b,"DSB"));
+});

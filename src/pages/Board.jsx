@@ -22,6 +22,7 @@ export default function Board() {
   const [board, setBoard] = useState(() => (week?.board ? clone(week.board) : null));
   const [syncedId, setSyncedId] = useState(week?.id);
   const [editor, setEditor] = useState(null);
+  const [adding, setAdding] = useState(null); // "ev-team" of the team being added to
   if (week && week.id !== syncedId) {
     setSyncedId(week.id);
     setBoard(week.board ? clone(week.board) : null);
@@ -96,6 +97,25 @@ export default function Board() {
     });
     setEditor(null);
     flash("Board cleared");
+  }
+
+  // Add a player to a team (manual build). Goes to starters if room, else subs.
+  // Removes them from any other slot in the same event first (no duplicates).
+  function addPlayer(ev, team, member) {
+    setBoard((b) => {
+      const n = clone(b);
+      // remove from any slot in this event
+      for (const t of ["A", "B"])
+        for (const bk of ["starters", "subs"])
+          n.events[ev][t][bk] = n.events[ev][t][bk].filter((m) => m.id !== member.id);
+      const slim = { id: member.id, name: member.name, thp: member.thp };
+      const bucket = n.events[ev][team].starters.length < 20 ? "starters" : "subs";
+      n.events[ev][team][bucket].push(slim);
+      // keep ordered by THP
+      n.events[ev][team][bucket].sort((a, c) => c.thp - a.thp || a.name.localeCompare(c.name));
+      return n;
+    });
+    flash(`Added ${member.name}`);
   }
   function swapIn(ev, team, bucket, oldId, newMember) {
     setBoard((b) => {
@@ -172,6 +192,9 @@ export default function Board() {
                 onRemove={removeFrom}
                 onSwap={swapIn}
                 onMove={moveTo}
+                onAdd={addPlayer}
+                adding={adding}
+                setAdding={setAdding}
               />
             ))}
           </div>
@@ -182,8 +205,10 @@ export default function Board() {
 }
 
 function TeamCard(props) {
-  const { team, data } = props;
+  const { team, data, ev, canEdit, adding, setAdding } = props;
   const power = [...data.starters, ...data.subs].reduce((s, m) => s + m.thp, 0);
+  const addKey = `${ev}-${team}`;
+  const addOpen = adding === addKey;
   return (
     <div className={"team team-" + team.toLowerCase()}>
       <div className="team-head">
@@ -192,6 +217,53 @@ function TeamCard(props) {
       </div>
       <SlotList {...props} title="Starters" cap={20} rows={data.starters} bucket="starters" />
       <SlotList {...props} title="Subs" cap={10} rows={data.subs} bucket="subs" sub />
+      {canEdit && (
+        <div className="team-add">
+          <button className="btn xs ghost" onClick={() => setAdding(addOpen ? null : addKey)}>
+            {addOpen ? "Close" : "+ Add player"}
+          </button>
+          {addOpen && (
+            <AddPicker {...props} onDone={() => setAdding(null)} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddPicker(props) {
+  const { ev, team, members, availability, coreSet, placedIds, onAdd } = props;
+  const [q, setQ] = useState("");
+  const list = useMemo(() =>
+    members
+      .filter((m) => m.active && m.name.toLowerCase().includes(q.toLowerCase()))
+      .sort((a, b) => b.thp - a.thp || a.name.localeCompare(b.name))
+      .slice(0, 40),
+    [members, q]);
+  return (
+    <div className="addpicker">
+      <input autoFocus className="bpicker-search" placeholder="Add player to this team…"
+        value={q} onChange={(e) => setQ(e.target.value)} />
+      <ul className="bpicker-list">
+        {list.map((m) => {
+          const already = placedIds.has(m.id);
+          const avail = wasAvailable(availability, m.id, ev);
+          return (
+            <li key={m.id}>
+              <button className="bpick" onClick={() => onAdd(ev, team, m)}>
+                <span className="bpick-name">
+                  {coreSet.has(m.id) && <span className="dot" />}{m.name}
+                  {!avail && <span className="warn" title="Wasn't marked available">!</span>}
+                  {already && <span className="bpick-tag">placed</span>}
+                </span>
+                <span className="bpick-thp">{thpShort(m.thp)}</span>
+                <span className="bpick-check"></span>
+              </button>
+            </li>
+          );
+        })}
+        {list.length === 0 && <li className="muted small" style={{ padding: "0.4rem" }}>No match</li>}
+      </ul>
     </div>
   );
 }

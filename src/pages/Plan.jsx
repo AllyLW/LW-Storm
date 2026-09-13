@@ -51,7 +51,7 @@ export default function Plan() {
     });
   }
 
-  async function generate() {
+  async function generate(mode = "auto") {
     // If a week with this label already exists, reuse it (overwrite the draft)
     // instead of trying to create a duplicate — labels must be unique.
     const existing = weeks.find((w) => w.label === label);
@@ -59,24 +59,32 @@ export default function Plan() {
       flash("That week is already confirmed — change the label or reopen it from History.");
       return;
     }
-    // Keep the existing week_index when regenerating so fairness stays stable;
-    // only mint a new index for a genuinely new week.
     const weekIndex = existing
       ? existing.week_index
       : (weeks.length ? Math.max(...weeks.map((w) => w.week_index)) + 1 : 0);
     const history = buildHistory(weeks, settings.fairness_window, weekIndex);
-    const result = assign(members, avail, history, { coreSize: settings.core_size, weekIndex });
+
+    // mode "auto"  -> fill everything with the engine (current behaviour)
+    // mode "empty" -> create the week with empty teams, build by hand on Board
+    let board;
+    if (mode === "empty") {
+      board = emptyBoard(members, settings.core_size);
+    } else {
+      const result = assign(members, avail, history, { coreSize: settings.core_size, weekIndex });
+      board = serializeBoard(result);
+    }
+
     try {
       const id = await api.saveWeek(pin, {
-        id: existing ? existing.id : null,   // <- update in place if it exists
+        id: existing ? existing.id : null,
         label,
         week_index: weekIndex,
         availability: avail,
-        board: serializeBoard(result),
+        board,
         confirm: false,
       });
       await reload();
-      flash(existing ? "Board regenerated" : "Board generated — review and confirm");
+      flash(mode === "empty" ? "Empty board created — build it on the Board" : (existing ? "Board regenerated" : "Board generated — review and confirm"));
       nav(`/board?week=${encodeURIComponent(id)}`);
     } catch (e) { flash(e.message); }
   }
@@ -98,7 +106,8 @@ export default function Plan() {
       <div className="pagehead">
         <h1>Plan the week</h1>
         <p className="muted">
-          Tick who voted available in-game. CSB is Thursday, DSB is Friday — the generator fills CSB first.
+          Tick who voted available, then <b>Generate teams</b> to auto-fill (CSB first, then DSB).
+          Or <b>Start empty</b> and place everyone by hand on the Board. You can always edit either afterward.
         </p>
       </div>
 
@@ -111,7 +120,10 @@ export default function Plan() {
           <span className="tally csb">CSB {counts.csb}</span>
           <span className="tally dsb">DSB {counts.dsb}</span>
         </div>
-        <button className="btn primary" onClick={generate}>Generate teams</button>
+        <div className="genbtns">
+          <button className="btn primary" onClick={() => generate("auto")}>Generate teams</button>
+          <button className="btn ghost" onClick={() => generate("empty")} title="Create an empty board and place everyone by hand on the Board page">Start empty</button>
+        </div>
       </div>
 
       <div className="toolbar">
@@ -164,5 +176,16 @@ export function serializeBoard(result) {
     },
     core: [...result.core],
     unplaced: result.unplaced,
+  };
+}
+// Build an empty board (no players placed) but with core marked, for manual mode.
+import { computeCore as _computeCore } from "../lib/engine.js";
+export function emptyBoard(members, coreSize) {
+  const emptyTeam = () => ({ starters: [], subs: [] });
+  const emptyEvent = () => ({ A: emptyTeam(), B: emptyTeam() });
+  return {
+    events: { CSB: emptyEvent(), DSB: emptyEvent() },
+    core: [..._computeCore(members, coreSize)],
+    unplaced: { core: [], pool: [] },
   };
 }
