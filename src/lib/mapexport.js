@@ -51,19 +51,7 @@ export async function exportMapImage({ ev, team, assign, memberById, format, wee
   // scale factor so tag text is legible relative to image size
   const S = W / 800; // tuned for ~1586px wide -> ~2
 
-  // spawns
-  for (const s of layout.spawns) {
-    const x = (s.x / 100) * W;
-    const y = (s.y / 100) * H;
-    ctx.font = `800 ${11 * S}px "Space Grotesk", sans-serif`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = "#fff";
-    ctx.shadowColor = "rgba(0,0,0,0.8)";
-    ctx.shadowBlur = 4 * S;
-    ctx.fillText(s.team === "blue" ? "BLUE BASE" : "RED BASE", x, y);
-    ctx.shadowBlur = 0;
-  }
+  // spawns are starter camps — not labelled on the export
 
   // buildings with assignments
   for (const b of layout.buildings) {
@@ -120,6 +108,40 @@ export async function exportMapImage({ ev, team, assign, memberById, format, wee
       ctx.fillText(names[i], cx, yy + chipHs / 2 + 0.5 * S);
       yy += chipHs + chipGap;
     }
+  }
+
+  // guardians — big name tags on the edges (drawn on top of buildings)
+  const guardians = assign.__guardians || {};
+  for (const z of layout.zones || []) {
+    const gid = guardians[z.key];
+    if (!gid) continue;
+    const name = memberById.get(gid)?.name || "?";
+    const cx = (z.x / 100) * W;
+    const cy = (z.y / 100) * H;
+    ctx.font = `800 ${15 * S}px "Space Grotesk", sans-serif`;
+    const tw = ctx.measureText(name).width;
+    const padX = 14 * S, padY = 9 * S;
+    const boxW = tw + padX * 2;
+    const boxH = 15 * S + padY * 2;
+    const bx = cx - boxW / 2;
+    const by = cy - boxH / 2;
+    // black tag with white border, like the in-game markers
+    ctx.fillStyle = "#141210";
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2.5 * S;
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = 6 * S;
+    ctx.shadowOffsetY = 3 * S;
+    roundRect(ctx, bx, by, boxW, boxH, 8 * S);
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(name, cx, cy + 0.5 * S);
   }
 
   // download
