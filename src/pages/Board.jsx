@@ -84,19 +84,22 @@ export default function Board() {
     setEditor(null);
   }
 
-  // Empty every slot on the board — for starting a hand-build from scratch.
-  function clearBoard() {
-    if (!window.confirm("Clear every player from all four teams? This can't be undone (but it's not saved until you hit Save edits).")) return;
-    setBoard((b) => {
-      const n = clone(b);
-      for (const ev of EVENTS)
-        for (const t of ["A", "B"])
-          for (const bk of ["starters", "subs"])
-            n.events[ev][t][bk] = [];
-      return n;
-    });
+  // Empty every slot on the board and SAVE immediately, so it persists across
+  // reloads/tab switches (otherwise the old board reloads from the database).
+  async function clearBoard() {
+    if (!window.confirm("Clear every player from all four teams? This saves immediately.")) return;
+    const cleared = clone(board);
+    for (const ev of EVENTS)
+      for (const t of ["A", "B"])
+        for (const bk of ["starters", "subs"])
+          cleared.events[ev][t][bk] = [];
+    setBoard(cleared);
     setEditor(null);
-    flash("Board cleared");
+    try {
+      await api.saveWeek(pin, { id: week.id, label: week.label, week_index: week.week_index, board: cleared, confirm: false });
+      await reload();
+      flash("Board cleared and saved");
+    } catch (e) { flash(e.message); }
   }
 
   // Add a player to a team (manual build). Goes to starters if room, else subs.
