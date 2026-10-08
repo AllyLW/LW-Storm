@@ -4,6 +4,7 @@ import { useApp } from "../App.jsx";
 import * as api from "../lib/api.js";
 import { MAPS, KIND, MAX_PER_BUILDING } from "../lib/maps.js";
 import { thpShort } from "../lib/format.js";
+import { useT } from "../lib/i18n.jsx";
 import { exportMapImage } from "../lib/mapexport.js";
 
 const EVENTS = ["CSB", "DSB"];
@@ -11,6 +12,7 @@ const BASE = import.meta.env.BASE_URL || "/";
 
 export default function MapBoard() {
   const { weeks, members, role, pin, reload, flash } = useApp();
+  const { t } = useT();
   const [params] = useSearchParams();
   const canEdit = role === "admin" || role === "officer";
 
@@ -39,10 +41,10 @@ export default function MapBoard() {
   if (!week || !week.board) {
     return (
       <section className="stack">
-        <div className="pagehead"><h1>Battle map</h1></div>
+        <div className="pagehead"><h1>{t("map.title")}</h1></div>
         <div className="panel empty">
-          <p>No week generated yet.</p>
-          {canEdit && <p className="muted small">Generate a week on Plan first, then assign players to buildings here.</p>}
+          <p>{t("map.noWeek")}</p>
+          {canEdit && <p className="muted small">{t("board.goPlan")}</p>}
         </div>
       </section>
     );
@@ -110,8 +112,8 @@ export default function MapBoard() {
   return (
     <section className="stack">
       <div className="pagehead">
-        <h1>Battle map — {layout.label}</h1>
-        <p className="muted">Click a building to assign players from Team {team}. Up to {MAX_PER_BUILDING} each.</p>
+        <h1>{t("map.title")} — {layout.label}</h1>
+        <p className="muted">{t("map.sub", { team, max: MAX_PER_BUILDING })}</p>
       </div>
 
       <div className="maptoolbar">
@@ -127,9 +129,9 @@ export default function MapBoard() {
               onClick={() => { setTeam(t); setPicking(null); }}>Team {t}</button>
           ))}
         </div>
-        {canEdit && !confirmed && <button className="btn primary" onClick={save}>Save map</button>}
+        {canEdit && !confirmed && <button className="btn primary" onClick={save}>{t("map.saveMap")}</button>}
         <div className="dlgroup">
-          <span className="dl-label">Download Team {team}:</span>
+          <span className="dl-label">{t("map.download", { team })}</span>
           <button className="btn ghost xs" onClick={() => download("png")}>PNG</button>
           <button className="btn ghost xs" onClick={() => download("jpeg")}>JPEG</button>
         </div>
@@ -162,7 +164,7 @@ export default function MapBoard() {
                         return <span key={id} className="map-chip">{m ? m.name : "?"}</span>;
                       })}
                     </span>
-                  ) : (canEdit && !confirmed && <span className="map-tag-add">+ assign</span>)}
+                  ) : (canEdit && !confirmed && <span className="map-tag-add">{t("map.assign")}</span>)}
                 </button>
 
                 {open && (
@@ -190,7 +192,7 @@ export default function MapBoard() {
                   onClick={() => canEdit && !confirmed && setPickingZone(open ? null : z.key)}
                   title={"Guardian covering: " + z.covers.map((k) => layout.buildings.find((b) => b.key === k)?.name).filter(Boolean).join(", ")}
                 >
-                  {gm ? gm.name : (canEdit && !confirmed ? "+ guardian" : "")}
+                  {gm ? gm.name : (canEdit && !confirmed ? t("map.guardian") : "")}
                 </button>
                 {open && (
                   <GuardianPicker
@@ -208,7 +210,7 @@ export default function MapBoard() {
 
         {/* summary list beside the map */}
         <aside className="mapsummary">
-          <h3>Team {team} — {layout.label}</h3>
+          <h3>{t("map.teamSummary", { team, label: layout.label })}</h3>
           <ul>
             {layout.buildings.map((b) => {
               const ids = assign[b.key] || [];
@@ -235,6 +237,7 @@ export default function MapBoard() {
 }
 
 function BuildingPicker({ building, ids, teamRoster, placedHere, coreSet, onToggle, onClear, onClose }) {
+  const { t } = useT();
   const [q, setQ] = useState("");
   const list = teamRoster
     .filter((m) => m.name.toLowerCase().includes(q.toLowerCase()))
@@ -267,12 +270,13 @@ function BuildingPicker({ building, ids, teamRoster, placedHere, coreSet, onTogg
         })}
         {list.length === 0 && <li className="muted small" style={{ padding: "0.4rem" }}>No match</li>}
       </ul>
-      {ids.length > 0 && <button className="bpicker-clear" onClick={onClear}>Clear building</button>}
+      {ids.length > 0 && <button className="bpicker-clear" onClick={onClear}>{t("map.clearBuilding")}</button>}
     </div>
   );
 }
 
 function GuardianPicker({ zone, layout, currentId, teamRoster, coreSet, onPick, onClear, onClose }) {
+  const { t } = useT();
   const [q, setQ] = useState("");
   const covers = zone.covers.map((k) => layout.buildings.find((b) => b.key === k)?.name).filter(Boolean);
   const list = teamRoster
@@ -281,10 +285,10 @@ function GuardianPicker({ zone, layout, currentId, teamRoster, coreSet, onPick, 
   return (
     <div className="bpicker guardian-picker" onClick={(e) => e.stopPropagation()}>
       <div className="bpicker-head">
-        <strong>Guardian</strong>
+        <strong>{t("map.guardianTitle")}</strong>
         <button className="bpicker-close" onClick={onClose}>×</button>
       </div>
-      <p className="muted small" style={{ margin: "0 0 0.4rem" }}>Covers: {covers.join(", ")}</p>
+      <p className="muted small" style={{ margin: "0 0 0.4rem" }}>{t("map.covers")} {covers.join(", ")}</p>
       <input autoFocus className="bpicker-search" placeholder="Pick a strong player…"
         value={q} onChange={(e) => setQ(e.target.value)} />
       <ul className="bpicker-list">
@@ -301,7 +305,7 @@ function GuardianPicker({ zone, layout, currentId, teamRoster, coreSet, onPick, 
         ))}
         {list.length === 0 && <li className="muted small" style={{ padding: "0.4rem" }}>No match</li>}
       </ul>
-      {currentId && <button className="bpicker-clear" onClick={onClear}>Remove guardian</button>}
+      {currentId && <button className="bpicker-clear" onClick={onClear}>{t("map.removeGuardian")}</button>}
     </div>
   );
 }

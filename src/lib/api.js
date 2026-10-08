@@ -81,6 +81,12 @@ export async function saveWeek(pin, w) {
   return data;
 }
 
+export async function deleteWeek(pin, id) {
+  if (!LIVE) return mock.deleteWeek(id);
+  const { error } = await sb.rpc("delete_week", { pin, w_id: id });
+  if (error) throw new ApiError("week_delete", error.message);
+}
+
 export async function updateSettings(pin, s) {
   if (!LIVE) return mock.updateSettings(s);
   const { error } = await sb.rpc("update_settings", {
@@ -150,6 +156,9 @@ const mock = {
     const id = `week-${Date.now()}`;
     store.weeks.push({ ...w, id, confirmed_at: w.confirm ? new Date().toISOString() : null });
     return id;
+  },
+  deleteWeek: (id) => {
+    store.weeks = store.weeks.filter((w) => w.id !== id);
   },
   updateSettings: (s) => {
     store.settings = { ...store.settings, ...s };

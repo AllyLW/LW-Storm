@@ -6,9 +6,11 @@ import { assign, computeCore } from "../lib/engine.js";
 import { buildHistory } from "../lib/history.js";
 import { thpShort } from "../lib/format.js";
 import { isoWeekLabel } from "../lib/format.js";
+import { useT } from "../lib/i18n.jsx";
 
 export default function Plan() {
   const { members, weeks, settings, role, pin, reload, flash } = useApp();
+  const { t } = useT();
   const nav = useNavigate();
   const canEdit = role === "admin" || role === "officer";
 
@@ -92,10 +94,10 @@ export default function Plan() {
   if (!canEdit) {
     return (
       <section className="stack">
-        <div className="pagehead"><h1>Plan the week</h1></div>
+        <div className="pagehead"><h1>{t("plan.title")}</h1></div>
         <div className="panel">
-          <p>Entering availability and generating teams is for R4 officers. Unlock with your PIN in the top right.</p>
-          <p className="muted small">Anyone can view the current teams on the Board and see fairness on History.</p>
+          <p>{t("plan.officerOnly")}</p>
+          <p className="muted small">{t("plan.viewNote")}</p>
         </div>
       </section>
     );
@@ -104,16 +106,15 @@ export default function Plan() {
   return (
     <section className="stack">
       <div className="pagehead">
-        <h1>Plan the week</h1>
+        <h1>{t("plan.title")}</h1>
         <p className="muted">
-          Tick who voted available, then <b>Generate teams</b> to auto-fill (CSB first, then DSB).
-          Or <b>Start empty</b> and place everyone by hand on the Board. You can always edit either afterward.
+          {t("plan.sub")}
         </p>
       </div>
 
       <div className="planbar">
         <label className="field">
-          <span>Week</span>
+          <span>{t("plan.week")}</span>
           <input value={label} onChange={(e) => setLabel(e.target.value)} />
         </label>
         <div className="tallies">
@@ -121,26 +122,26 @@ export default function Plan() {
           <span className="tally dsb">DSB {counts.dsb}</span>
         </div>
         <div className="genbtns">
-          <button className="btn primary" onClick={() => generate("auto")}>Generate teams</button>
-          <button className="btn ghost" onClick={() => generate("empty")} title="Create an empty board and place everyone by hand on the Board page">Start empty</button>
+          <button className="btn primary" onClick={() => generate("auto")}>{t("plan.generate")}</button>
+          <button className="btn ghost" onClick={() => generate("empty")} >{t("plan.startEmpty")}</button>
         </div>
       </div>
 
       <div className="toolbar">
-        <input className="search" placeholder="Search name" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="search" placeholder={t("common.search")} value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="bulk">
-          <span className="muted small">Quick set:</span>
-          <button className="btn xs" onClick={() => checkAllCore("CSB", true)}>Core → CSB</button>
-          <button className="btn xs" onClick={() => checkAllCore("DSB", true)}>Core → DSB</button>
-          <button className="btn xs ghost" onClick={() => { checkAll("CSB", false); checkAll("DSB", false); }}>Clear all</button>
+          <span className="muted small">{t("plan.quickSet")}</span>
+          <button className="btn xs" onClick={() => checkAllCore("CSB", true)}>{t("plan.coreTo")} CSB</button>
+          <button className="btn xs" onClick={() => checkAllCore("DSB", true)}>{t("plan.coreTo")} DSB</button>
+          <button className="btn xs ghost" onClick={() => { checkAll("CSB", false); checkAll("DSB", false); }}>{t("common.clearAll")}</button>
         </div>
       </div>
 
       <div className="gridhead">
         <span className="gh-name">Member</span>
         <span className="gh-thp">Power</span>
-        <button className="gh-ev csb" onClick={() => checkAll("CSB", true)}>CSB ✓ all</button>
-        <button className="gh-ev dsb" onClick={() => checkAll("DSB", true)}>DSB ✓ all</button>
+        <button className="gh-ev csb" onClick={() => checkAll("CSB", true)}>CSB {t("plan.allCheck")}</button>
+        <button className="gh-ev dsb" onClick={() => checkAll("DSB", true)}>DSB {t("plan.allCheck")}</button>
       </div>
       <ul className="availgrid">
         {shown.map((m) => (

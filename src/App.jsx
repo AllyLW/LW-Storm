@@ -7,6 +7,7 @@ import Board from "./pages/Board.jsx";
 import MapBoard from "./pages/MapBoard.jsx";
 import History from "./pages/History.jsx";
 import Admin from "./pages/Admin.jsx";
+import { useT } from "./lib/i18n.jsx";
 
 // Shared app state: settings, members, weeks, and the officer role.
 const Ctx = createContext(null);
@@ -21,6 +22,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [toast, setToast] = useState(null);
+  const { t } = useT();
 
   const reload = useCallback(async () => {
     const [s, m, w] = await Promise.all([api.getSettings(), api.getMembers(), api.getWeeks()]);
@@ -64,7 +66,7 @@ export default function App() {
     flash("Locked");
   }, [flash]);
 
-  if (loading) return <div className="loading">Loading…</div>;
+  if (loading) return <div className="loading">{t("common.loading")}</div>;
   if (err) return <div className="loading err">{err}<br /><span className="small">Check your Supabase settings and reload.</span></div>;
 
   const ctx = { settings, setSettings, members, weeks, role, pin, reload, flash, unlock, lock };
@@ -86,7 +88,7 @@ export default function App() {
         </main>
         {!api.LIVE && (
           <div className="demo-note">
-            Demo mode — no database connected. PINs are <code>admin</code> / <code>officer</code>. Data resets on reload.
+            {t("common.demo")} <code>admin</code> / <code>officer</code>{t("common.demoReset")}
           </div>
         )}
         {toast && <div className="toast">{toast}</div>}
@@ -97,15 +99,16 @@ export default function App() {
 
 function Header() {
   const { settings, role, unlock, lock } = useApp();
+  const { t, lang, setLang } = useT();
   const [pinInput, setPinInput] = useState("");
   const nav = [
-    ["/plan", "Plan"],
-    ["/board", "Board"],
-    ["/map", "Map"],
-    ["/roster", "Roster"],
-    ["/history", "History"],
+    ["/plan", t("nav.plan")],
+    ["/board", t("nav.board")],
+    ["/map", t("nav.map")],
+    ["/roster", t("nav.roster")],
+    ["/history", t("nav.history")],
   ];
-  if (role === "admin") nav.push(["/admin", "Admin"]);
+  if (role === "admin") nav.push(["/admin", t("nav.admin")]);
 
   return (
     <header className="header">
@@ -113,7 +116,7 @@ function Header() {
         <span className="brand-mark">◆</span>
         <div>
           <div className="brand-name">{settings.alliance}</div>
-          <div className="brand-sub">Storm events</div>
+          <div className="brand-sub">{t("brand.sub")}</div>
         </div>
       </div>
       <nav className="nav">
@@ -124,18 +127,22 @@ function Header() {
         ))}
       </nav>
       <div className="lock">
+        <div className="langs">
+          <button className={"lang" + (lang === "en" ? " on" : "")} onClick={() => setLang("en")}>EN</button>
+          <button className={"lang" + (lang === "ar" ? " on" : "")} onClick={() => setLang("ar")}>ع</button>
+        </div>
         {role ? (
-          <button className="btn ghost" onClick={lock}>Lock ({role})</button>
+          <button className="btn ghost" onClick={lock}>{t("lock.locked")} ({role})</button>
         ) : (
           <>
             <input
               type="password"
-              placeholder="R4 PIN"
+              placeholder={t("lock.pin")}
               value={pinInput}
               onChange={(e) => setPinInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { unlock(pinInput); setPinInput(""); } }}
             />
-            <button className="btn" onClick={() => { unlock(pinInput); setPinInput(""); }}>Unlock</button>
+            <button className="btn" onClick={() => { unlock(pinInput); setPinInput(""); }}>{t("lock.unlock")}</button>
           </>
         )}
       </div>

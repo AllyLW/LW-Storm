@@ -431,3 +431,28 @@ body {
   font-weight: 700; opacity: 0.8; padding: 0.35rem 0.7rem; min-width: 0; }
 .guardian-picker { width: 13rem; }
 @media (max-width: 640px) { .map-guardian { font-size: 0.8rem; padding: 0.35rem 0.7rem; } }
+/* delete button on history weeks */
+.weeklist li { align-items: center; }
+.wk-del { margin-left: auto; }
+
+/* ---------- language switcher + Arabic RTL ---------- */
+.langs { display: inline-flex; border: 2px solid var(--ink); border-radius: 999px; overflow: hidden; background: var(--paper); }
+.lang { border: 0; background: transparent; padding: 0.25rem 0.6rem; font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--muted); cursor: pointer; }
+.lang + .lang { border-inline-start: 2px solid var(--ink); }
+.lang.on { background: var(--ink); color: var(--cream); }
+.lang:hover:not(.on) { background: var(--cream); }
+
+/* Arabic font + RTL adjustments */
+html[lang="ar"] body { font-family: "Cairo", "Space Grotesk", "Segoe UI", Tahoma, sans-serif; }
+html[lang="ar"] h1, html[lang="ar"] h2, html[lang="ar"] h3 { letter-spacing: 0; }
+/* keep data/power numbers in the mono LTR style even in Arabic */
+html[lang="ar"] .num, html[lang="ar"] .thp, html[lang="ar"] .slot-thp,
+html[lang="ar"] .team-power, html[lang="ar"] .ag-thp, html[lang="ar"] .tally {
+  direction: ltr; unicode-bidi: embed;
+}
+/* flip the header-underline gradient origin for RTL so it still reads left group */
+html[dir="rtl"] .pagehead h1 { padding-left: 0; padding-right: 0.9rem; }
+html[dir="rtl"] .pagehead h1::before { left: auto; right: 0; }
+/* the board/map keep LTR internally (team layout is spatial, not textual) */
+html[dir="rtl"] .battlemap, html[dir="rtl"] .mapframe, html[dir="rtl"] .teams,
+html[dir="rtl"] .availgrid, html[dir="rtl"] .gridhead { direction: ltr; }

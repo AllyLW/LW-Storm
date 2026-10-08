@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useApp } from "../App.jsx";
 import * as api from "../lib/api.js";
+import { useT } from "../lib/i18n.jsx";
 
 export default function Admin() {
   const { settings, role, pin, reload, flash } = useApp();
+  const { t } = useT();
   const [form, setForm] = useState({
     alliance: settings.alliance,
     core_size: settings.core_size,
@@ -13,8 +15,8 @@ export default function Admin() {
   if (role !== "admin") {
     return (
       <section className="stack">
-        <div className="pagehead"><h1>Admin</h1></div>
-        <div className="panel"><p>Admin PIN required.</p></div>
+        <div className="pagehead"><h1>{t("admin.title")}</h1></div>
+        <div className="panel"><p>{t("admin.pinRequired")}</p></div>
       </section>
     );
   }
@@ -27,32 +29,32 @@ export default function Admin() {
         fairness_window: Number(form.fairness_window),
       });
       await reload();
-      flash("Settings saved");
+      flash(t("admin.save"));
     } catch (e) { flash(e.message); }
   }
 
   return (
     <section className="stack">
       <div className="pagehead">
-        <h1>Admin</h1>
-        <p className="muted">These change how the generator behaves for everyone.</p>
+        <h1>{t("admin.title")}</h1>
+        <p className="muted">{t("admin.sub")}</p>
       </div>
       <div className="panel form">
         <label className="field">
-          <span>Alliance name</span>
+          <span>{t("admin.alliance")}</span>
           <input value={form.alliance} onChange={(e) => setForm({ ...form, alliance: e.target.value })} />
         </label>
         <label className="field">
-          <span>Core size (top N by power play both events)</span>
+          <span>{t("admin.coreSize")}</span>
           <input type="number" min="0" max="100" value={form.core_size}
             onChange={(e) => setForm({ ...form, core_size: e.target.value })} />
         </label>
         <label className="field">
-          <span>Fairness window (weeks)</span>
+          <span>{t("admin.window")}</span>
           <input type="number" min="1" max="52" value={form.fairness_window}
             onChange={(e) => setForm({ ...form, fairness_window: e.target.value })} />
         </label>
-        <button className="btn primary" onClick={save}>Save settings</button>
+        <button className="btn primary" onClick={save}>{t("admin.save")}</button>
       </div>
     </section>
   );

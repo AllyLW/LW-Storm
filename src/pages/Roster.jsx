@@ -3,9 +3,11 @@ import { useApp } from "../App.jsx";
 import * as api from "../lib/api.js";
 import { computeCore } from "../lib/engine.js";
 import { thpShort, thpFull } from "../lib/format.js";
+import { useT } from "../lib/i18n.jsx";
 
 export default function Roster() {
   const { members, settings, role, pin, reload, flash } = useApp();
+  const { t } = useT();
   const [q, setQ] = useState("");
   const [paste, setPaste] = useState("");
   const [showPaste, setShowPaste] = useState(false);
@@ -58,18 +60,15 @@ export default function Roster() {
   return (
     <section className="stack">
       <div className="pagehead">
-        <h1>Roster</h1>
-        <p className="muted">
-          {members.filter((m) => m.active).length} active · core = top {settings.core_size} by power.
-          Core players are marked and always get event priority.
-        </p>
+        <h1>{t("roster.title")}</h1>
+        <p className="muted">{t("roster.sub", { n: members.filter((m) => m.active).length, core: settings.core_size })}</p>
       </div>
 
       <div className="toolbar">
-        <input className="search" placeholder="Search name" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="search" placeholder={t("common.search")} value={q} onChange={(e) => setQ(e.target.value)} />
         {canEdit && (
           <button className="btn ghost" onClick={() => setShowPaste((v) => !v)}>
-            {showPaste ? "Close paste" : "Bulk paste THP"}
+            {showPaste ? t("roster.closePaste") : t("roster.bulkPaste")}
           </button>
         )}
       </div>
@@ -77,8 +76,7 @@ export default function Roster() {
       {canEdit && showPaste && (
         <div className="panel paste">
           <p className="muted small">
-            One member per line: <code>Name, THP</code>. THP accepts <code>12.4M</code>, <code>980K</code> or raw numbers.
-            Existing names update; new names are added.
+            {t("roster.pasteHelp")}
           </p>
           <textarea
             rows={8}
@@ -86,18 +84,18 @@ export default function Roster() {
             value={paste}
             onChange={(e) => setPaste(e.target.value)}
           />
-          <button className="btn" onClick={runPaste}>Apply paste</button>
+          <button className="btn" onClick={runPaste}>{t("roster.applyPaste")}</button>
         </div>
       )}
 
       {canEdit && (
         <div className="addrow">
-          <input placeholder="New member name" value={draft.name}
+          <input placeholder={t("roster.newName")} value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          <input placeholder="THP (e.g. 12.4M)" value={draft.thp}
+          <input placeholder={t("roster.thp")} value={draft.thp}
             onChange={(e) => setDraft({ ...draft, thp: e.target.value })}
             onBlur={(e) => setDraft({ ...draft, thp: parseThp(e.target.value) })} />
-          <button className="btn" onClick={addNew}>Add</button>
+          <button className="btn" onClick={addNew}>{t("roster.add")}</button>
         </div>
       )}
 
@@ -109,7 +107,7 @@ export default function Roster() {
           return (
             <li key={m.id} className={(m.active ? "" : "inactive ") + (isCore ? "core" : "")}>
               <span className="rank">{rank}</span>
-              {isCore && <span className="tag core-tag">CORE</span>}
+              {isCore && <span className="tag core-tag">{t("roster.core")}</span>}
               {isEditing ? (
                 <>
                   <input className="edit-name" defaultValue={m.name}
@@ -118,8 +116,8 @@ export default function Roster() {
                     onChange={(e) => (m._thp = e.target.value)} />
                   <button className="btn xs" onClick={() =>
                     save({ ...m, name: m._name ?? m.name, thp: m._thp != null ? parseThp(m._thp) : m.thp })
-                  }>Save</button>
-                  <button className="btn xs ghost" onClick={() => setEditing(null)}>Cancel</button>
+                  }>{t("common.save")}</button>
+                  <button className="btn xs ghost" onClick={() => setEditing(null)}>{t("common.cancel")}</button>
                 </>
               ) : (
                 <>
@@ -127,9 +125,9 @@ export default function Roster() {
                   <span className="thp" title={thpFull(m.thp)}>{thpShort(m.thp)}</span>
                   {canEdit && (
                     <span className="rowactions">
-                      <button className="btn xs ghost" onClick={() => setEditing(m.id)}>Edit</button>
+                      <button className="btn xs ghost" onClick={() => setEditing(m.id)}>{t("roster.edit")}</button>
                       <button className="btn xs ghost" onClick={() => toggleActive(m)}>
-                        {m.active ? "Bench" : "Activate"}
+                        {m.active ? t("roster.bench") : t("roster.activate")}
                       </button>
                       <button className="btn xs ghost danger" onClick={() => remove(m)}>×</button>
                     </span>

@@ -170,3 +170,15 @@ begin
   update settings set alliance = s_alliance, core_size = s_core, fairness_window = s_window where id = 1;
 end; $$;
 grant execute on function update_settings(text, text, int, int) to anon, authenticated;
+
+-- delete a week (admin or officer)
+create or replace function delete_week(pin text, w_id uuid)
+returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare role text;
+begin
+  role := check_pin(pin);
+  if role is null then raise exception 'bad pin'; end if;
+  delete from weeks where id = w_id;
+end; $$;
+grant execute on function delete_week(text, uuid) to anon, authenticated;

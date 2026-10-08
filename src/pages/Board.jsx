@@ -3,12 +3,14 @@ import { useSearchParams } from "react-router-dom";
 import { useApp } from "../App.jsx";
 import * as api from "../lib/api.js";
 import { thpShort, thpFull } from "../lib/format.js";
+import { useT } from "../lib/i18n.jsx";
 
 const EVENTS = ["CSB", "DSB"];
-const EV_LABEL = { CSB: "Canyon Storm — Thursday", DSB: "Desert Storm — Friday" };
+const EV_KEY = { CSB: "board.csb", DSB: "board.dsb" };
 
 export default function Board() {
   const { weeks, members, role, pin, reload, flash } = useApp();
+  const { t } = useT();
   const [params] = useSearchParams();
   const canEdit = role === "admin" || role === "officer";
 
@@ -34,8 +36,8 @@ export default function Board() {
       <section className="stack">
         <div className="pagehead"><h1>Board</h1></div>
         <div className="panel empty">
-          <p>No teams generated yet.</p>
-          {canEdit && <p className="muted small">Go to Plan, enter availability, and generate the week.</p>}
+          <p>{t("board.noTeams")}</p>
+          {canEdit && <p className="muted small">{t("board.goPlan")}</p>}
         </div>
       </section>
     );
@@ -183,8 +185,7 @@ export default function Board() {
         <div>
           <h1>{week.label}</h1>
           <p className="muted">
-            {confirmed ? "Confirmed — locked so participation stays accurate. Reopen to make changes."
-                       : "Draft — tap ✎ on any name to swap or move. Confirm when it's final."}
+            {confirmed ? t("board.confirmed") : t("board.draft")}
             {board.unplaced && (board.unplaced.pool.length + board.unplaced.core.length > 0) && (
               <> · {board.unplaced.pool.length + board.unplaced.core.length} couldn't be placed (over capacity)</>
             )}
@@ -192,14 +193,14 @@ export default function Board() {
         </div>
         {canEdit && !confirmed && (
           <div className="board-actions">
-            <button className="btn ghost danger" onClick={clearBoard}>Clear board</button>
-            <button className="btn ghost" onClick={saveEdits}>Save edits</button>
-            <button className="btn primary" onClick={confirmWeek}>Confirm week</button>
+            <button className="btn ghost danger" onClick={clearBoard}>{t("board.clear")}</button>
+            <button className="btn ghost" onClick={saveEdits}>{t("board.saveEdits")}</button>
+            <button className="btn primary" onClick={confirmWeek}>{t("board.confirmWeek")}</button>
           </div>
         )}
         {canEdit && confirmed && (
           <div className="board-actions">
-            <button className="btn primary" onClick={reopenWeek}>Reopen week</button>
+            <button className="btn primary" onClick={reopenWeek}>{t("board.reopenWeek")}</button>
           </div>
         )}
       </div>
@@ -207,8 +208,8 @@ export default function Board() {
       {EVENTS.map((ev) => (
         <div key={ev} className={"event " + ev.toLowerCase()}>
           <div className="event-head">
-            <h2><span className="ev-icon">{ev === "CSB" ? "🏔️" : "🏜️"}</span>{EV_LABEL[ev]}</h2>
-            <span className="event-count">{countEvent(board.events[ev])} placed</span>
+            <h2><span className="ev-icon">{ev === "CSB" ? "🏔️" : "🏜️"}</span>{t(EV_KEY[ev])}</h2>
+            <span className="event-count">{countEvent(board.events[ev])} {t("board.placed")}</span>
           </div>
           <div className="teams">
             {["A", "B"].map((team) => (
@@ -241,6 +242,7 @@ export default function Board() {
 }
 
 function TeamCard(props) {
+  const { t } = useT();
   const { team, data, ev, canEdit, adding, setAdding } = props;
   const power = [...data.starters, ...data.subs].reduce((s, m) => s + m.thp, 0);
   const addKey = `${ev}-${team}`;
@@ -251,12 +253,12 @@ function TeamCard(props) {
         <h3>Team {team}</h3>
         <span className="team-power" title={thpFull(power)}>⚡ {thpShort(power)}</span>
       </div>
-      <SlotList {...props} title="Starters" cap={20} rows={data.starters} bucket="starters" />
-      <SlotList {...props} title="Subs" cap={10} rows={data.subs} bucket="subs" sub />
+      <SlotList {...props} title={t("board.starters")} cap={20} rows={data.starters} bucket="starters" />
+      <SlotList {...props} title={t("board.subs")} cap={10} rows={data.subs} bucket="subs" sub />
       {canEdit && (
         <div className="team-add">
           <button className="btn xs ghost" onClick={() => setAdding(addOpen ? null : addKey)}>
-            {addOpen ? "Close" : "+ Add player"}
+            {addOpen ? t("board.close") : t("board.addPlayer")}
           </button>
           {addOpen && (
             <AddPicker {...props} onDone={() => setAdding(null)} />
@@ -268,6 +270,7 @@ function TeamCard(props) {
 }
 
 function AddPicker(props) {
+  const { t } = useT();
   const { ev, team, members, availability, coreSet, placedIds, onAdd } = props;
   const [q, setQ] = useState("");
   const list = useMemo(() =>
@@ -278,7 +281,7 @@ function AddPicker(props) {
     [members, q]);
   return (
     <div className="addpicker">
-      <input autoFocus className="bpicker-search" placeholder="Add player to this team…"
+      <input autoFocus className="bpicker-search" placeholder={t('board.addPlayer')}
         value={q} onChange={(e) => setQ(e.target.value)} />
       <ul className="bpicker-list">
         {list.map((m) => {
@@ -355,6 +358,7 @@ function SlotList(props) {
 }
 
 function SlotEditor({ slot, member, members, availability, placedIds, onClose, onRemove, onSwap, onMove }) {
+  const { t } = useT();
   const [tab, setTab] = useState("swap");
   const [q, setQ] = useState("");
 
@@ -377,8 +381,8 @@ function SlotEditor({ slot, member, members, availability, placedIds, onClose, o
   return (
     <div className="editor-pop" onClick={(e) => e.stopPropagation()}>
       <div className="editor-tabs">
-        <button className={tab === "swap" ? "on" : ""} onClick={() => setTab("swap")}>Swap in</button>
-        <button className={tab === "move" ? "on" : ""} onClick={() => setTab("move")}>Move</button>
+        <button className={tab === "swap" ? "on" : ""} onClick={() => setTab("swap")}>{t("board.swapIn")}</button>
+        <button className={tab === "move" ? "on" : ""} onClick={() => setTab("move")}>{t("board.move")}</button>
         <button className="editor-close" onClick={onClose}>×</button>
       </div>
 
@@ -422,7 +426,7 @@ function SlotEditor({ slot, member, members, availability, placedIds, onClose, o
       )}
 
       <button className="editor-remove" onClick={() => onRemove(slot.ev, slot.team, slot.bucket, member.id)}>
-        Remove from team
+        {t("board.removeTeam")}
       </button>
     </div>
   );
