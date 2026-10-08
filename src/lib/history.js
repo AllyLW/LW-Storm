@@ -32,8 +32,7 @@ export function playedEventsInWeek(board) {
 // Returns { [memberId]: { window, allTime, lastPlayedWeek } }
 export function buildHistory(weeks, window, uptoIndex = Infinity) {
   const confirmed = weeks
-    .filter((w) => w.board && w.week_index < uptoIndex)
-    .sort((a, b) => a.week_index - b.week_index);
+.filter((w) => w.board && w.confirmed_at && w.week_index < uptoIndex)    .sort((a, b) => a.week_index - b.week_index);
 
   const windowStart = uptoIndex === Infinity
     ? (confirmed.length ? confirmed[confirmed.length - 1].week_index - window + 1 : 0)
