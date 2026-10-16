@@ -367,8 +367,7 @@ body {
   padding: 0.15rem 0.4rem; backdrop-filter: blur(2px); box-shadow: 0 2px 6px rgba(0,0,0,0.5); transition: transform 0.08s; }
 .map-tag:hover { transform: scale(1.06); }
 .map-tag.empty { background: rgba(20,18,16,0.55); border-style: dashed; }
-.map-tag-name { font-size: 0.6rem; font-weight: 800; color: #fff; white-space: nowrap; letter-spacing: 0.02em; }
-.map-tag-add { font-size: 0.55rem; font-weight: 700; color: #ffd; opacity: 0.85; }
+.map-tag-name { font-size: 0.6rem; font-weight: 800; color: var(--name, #fff); white-space: nowrap; letter-spacing: 0.02em; }.map-tag-add { font-size: 0.55rem; font-weight: 700; color: #ffd; opacity: 0.85; }
 .map-tag-players { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; max-width: 8rem; }
 .map-chip { font-size: 0.56rem; font-weight: 700; background: var(--tint); color: #fff;
   padding: 0.02rem 0.28rem; border-radius: 4px; white-space: nowrap; }
