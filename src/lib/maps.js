@@ -76,10 +76,10 @@ export const KIND = {
   silo:     { tint: "#c8102e", label: "Highest points" },
   buff:     { tint: "#7a4fbf", label: "+15% hero buff" },
   debuff:   { tint: "#8a5a2b", label: "-15% enemy" },
-  info:     { tint: "#2f7d6b", label: "+10% capture points" },
+  info:     { tint: "#3b8bff", nameColor: "#3b8bff", label: "+10% capture points" },
   hospital: { tint: "#0c7a4a", label: "Heals troops" },
   oil:      { tint: "#c67a2e", label: "Main points" },
-  tech:     { tint: "#3a6ea5", label: "+50% speed" },
+  tech:     { tint: "#2fbf71", nameColor: "#2fbf71", label: "+50% speed" },
 };
 
 export const MAX_PER_BUILDING = 5;
