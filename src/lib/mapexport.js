@@ -89,7 +89,7 @@ export async function exportMapImage({ ev, team, assign, memberById, format, wee
 
     // building name
     ctx.font = `800 ${11 * S}px "Space Grotesk", sans-serif`;
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = kind.nameColor || "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(b.name, cx, by + 4 * S);
