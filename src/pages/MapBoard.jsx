@@ -152,7 +152,7 @@ export default function MapBoard() {
               <div key={b.key} className="map-bpos" style={{ left: `${b.x}%`, top: `${b.y}%` }}>
                 <button
                   className={"map-tag" + (ids.length ? " filled" : " empty")}
-                  style={{ "--tint": kind.tint }}
+                  style={{ "--tint": kind.tint, "--name": kind.nameColor || "#fff" }}
                   onClick={() => canEdit && !confirmed && setPicking(open ? null : b.key)}
                   title={b.name + " — " + kind.label}
                 >
